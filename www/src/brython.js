@@ -64,8 +64,8 @@ $B.regexIdentifier=/^(?:[\$A-Z_a-z\xAA\xB5\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02C1\u02C
 __BRYTHON__.implementation=[3,6,3,'dev',0]
 __BRYTHON__.__MAGIC__="3.6.3"
 __BRYTHON__.version_info=[3,3,0,'alpha',0]
-__BRYTHON__.compiled_date="2018-06-28 15:27:58.834679"
-__BRYTHON__.timestamp=1530192478834
+__BRYTHON__.compiled_date="2018-06-28 21:57:21.085002"
+__BRYTHON__.timestamp=1530248241085
 __BRYTHON__.builtin_module_names=["posix","sys","errno","time","_ajax","_base64","_jsre","_multiprocessing","_posixsubprocess","_profile","_svg","_sys","builtins","dis","hashlib","json","long_int","math","modulefinder","random","_abcoll","_codecs","_collections","_csv","_functools","_imp","_io","_py_abc","_random","_socket","_sre","_string","_struct","_sysconfigdata","_testcapi","_thread","_warnings","_weakref"]
 
 ;(function($B){Number.isInteger=Number.isInteger ||function(value){return typeof value==='number' &&
@@ -4542,6 +4542,54 @@ if($B.debug >=2){if(module==locals_id){console.log('module ' + module + ' transl
 (t1 - t0)+ ' ms')}}
 $B.compile_time +=t1 - t0
 return root}
+var load_scripts=$B.parser.load_scripts=function(scripts,run_script,onerror){
+if(run_script===undefined){run_script=$B._run_script}
+function callback(ev,script){var ok=false,skip=false
+if(ev !==null){var req=ev.target
+if(req.readyState==4){if(req.status==200){ok=true;
+var script={name: req.module_name,url: req.responseURL,src: req.responseText}}}else{
+skip=true}}else{
+ok=true}
+if(skip){return}
+if(ok){try{run_script(script)}catch(e){if(onerror===undefined){throw e}
+else{onerror(e)}}
+if(scripts.length > 0){load_scripts(scripts)}}else{try{throw Error("cannot load script "+
+req.module_name + ' at ' + req.responseURL +
+': error ' + req.status)}catch(e){if(onerror===undefined){throw e}
+else{onerror(e)}}}}
+var noajax=true
+while(scripts.length > 0 && noajax){var script=scripts.shift()
+if(script['src']===undefined){
+noajax=false;
+var req=new XMLHttpRequest()
+req.onreadystatechange=callback
+req.module_name=script.name
+req.open('GET',script.url,true)
+req.send()}else{
+callback(null,script)
+load_scripts(scripts)}}}
+$B._load_scripts=load_scripts
+var run_script=$B.parser.run_script=function(script){
+$B.$py_module_path[script.name]=script.url
+var root,js
+try{
+root=$B.py2js(script.src,script.name,script.name)
+js=root.to_js()
+if($B.debug > 1){console.log(js)}
+eval(js)}catch(err){if($B.debug > 1){console.log(err)
+for(var attr in err){console.log(attr + ' : ',err[attr])}}
+if(err.$py_error===undefined){console.log('Javascript error',err)
+err=_b_.RuntimeError.$factory(err + '')}
+var name=err.__class__.__name__
+var $trace=_b_.getattr(err,'info')
+if(name=='SyntaxError' ||name=='IndentationError'){var offset=err.args[3]
+$trace +='\n    ' + ' '.repeat(offset)+ '^' +
+'\n' + name + ': ' + err.args[0]}else{$trace +='\n' + name + ': ' + err.args}
+try{_b_.getattr($B.stderr,'write')($trace)}catch(print_exc_err){console.log($trace)}
+throw err}finally{root=null
+js=null
+$B.clear_ns(script.name)}}
+$B._run_script=run_script
 var brython=$B.parser.brython=function(options){
 if($B.meta_path===undefined){$B.meta_path=[]}
 $B.$options={}
@@ -4695,7 +4743,7 @@ handle_error(err)}
 loop()}else{
 func.apply(null,args)}}
 $B.tasks=[]
-$B.has_indexedDB=window.indexedDB !==undefined
+$B.has_indexedDB=_window.indexedDB !==undefined
 function handle_error(err){
 if(err.__class__ !==undefined){var name=err.__class__.__name__,trace=_b_.getattr(err,'info')
 if(name=='SyntaxError' ||name=='IndentationError'){var offset=err.args[3]
@@ -9307,7 +9355,7 @@ return offset}
 var TIM_SORT_ASSERTION="TimSortAssertion"
 var TimSortAssertion=function(message){this.name=TIM_SORT_ASSERTION
 this.message=message}
-var TimSort=function(array,compare){self={array: array,compare: compare,minGallop: DEFAULT_MIN_GALLOPING,length : array.length,tmpStorageLength: DEFAULT_TMP_STORAGE_LENGTH,stackLength: 0,runStart: null,runLength: null,stackSize: 0,
+var TimSort=function(array,compare){var self={array: array,compare: compare,minGallop: DEFAULT_MIN_GALLOPING,length : array.length,tmpStorageLength: DEFAULT_TMP_STORAGE_LENGTH,stackLength: 0,runStart: null,runLength: null,stackSize: 0,
 pushRun: function(runStart,runLength){this.runStart[this.stackSize]=runStart
 this.runLength[this.stackSize]=runLength
 this.stackSize +=1},
@@ -11145,7 +11193,7 @@ _b_.frozenset=frozenset})(__BRYTHON__)
 ;(function($B){eval($B.InjectBuiltins())
 var object=_b_.object
 var JSObject=$B.JSObject
-var _window=window 
+var _window=self;
 function $getMouseOffset(target,ev){ev=ev ||_window.event;
 var docPos=$getPosition(target);
 var mousePos=$mouseCoords(ev);

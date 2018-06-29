@@ -431,7 +431,7 @@ var TimSortAssertion = function(message) {
 
 
 var TimSort = function(array, compare){
-    self = {
+    var self = {
         array: array,
         compare: compare,
         minGallop: DEFAULT_MIN_GALLOPING,
