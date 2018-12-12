@@ -379,7 +379,7 @@ function deep_copy(stack) {
 }
 
 BaseException.$factory = function (){
-    var err = Error()
+    var err = Error("Python exception BaseException")
     err.args = _b_.tuple.$factory(Array.prototype.slice.call(arguments))
     err.__class__ = _b_.BaseException
     err.$py_error = true

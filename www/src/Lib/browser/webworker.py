@@ -69,11 +69,14 @@ class Reply(asyncio.Future):
         return cls._LAST_MESSAGE_ID
     
     @classmethod
-    def terminate(cls, worker):
+    def terminate(cls, worker, error=None):
         wr = {}
         for id, reply in cls._WAITING_REPLIES.items():
             if reply._worker == worker:
-                reply.set_exception(WorkerError("Worker Terminated"))
+                if error:
+                    reply.set_exception(WorkerError("Worker Error: " + str(error)))
+                else:
+                    reply.set_exception(WorkerError("Worker Terminated"))
             else:
                 wr[id] = reply
         cls._WAITING_REPLIES = wr
@@ -94,7 +97,7 @@ class Reply(asyncio.Future):
     def finish_waiting(self, *args, **kwargs):
         if self._timeout:
             self._timeout.cancel()
-        del self._WAITING_REPLIES[self._wait_id]
+        #del self._WAITING_REPLIES[self._wait_id]
         
     def set_result(self, result):
         super().set_result(result)
@@ -228,9 +231,10 @@ class WorkerCommon:
                 h(event, data, src=self)
         except Exception as ex:
             # TODO: Add error handling
-            print("Exception", str(ex), "while handling", event, "data=", str(data.data))
+            import traceback
+            traceback.print_exc()
+            print("Exception", str(ex), "while handling", event, "data=", str(data))
 
-                
     def __error_handler(self, error, *_, **kwargs):
         self._emit_event('error', error)
         
@@ -288,7 +292,7 @@ class WorkerParent(WorkerCommon):
          })
         CHILD_WORKERS.append(self)
         
-    def terminate(self):
+    def terminate(self, error=None):
         """
             Forcibly Terminates the worker.
             
@@ -298,7 +302,7 @@ class WorkerParent(WorkerCommon):
             raise WorkerError("Invalid state")
         self._worker.terminate()
         self._status = S_TERMINATED
-        Reply.terminate(self)
+        Reply.terminate(self, error)
         self._emit_event('exited')
         
     def wait_for_status(self, status):
@@ -326,7 +330,7 @@ class WorkerParent(WorkerCommon):
         self._status_waiters = keep
         if self._status >= S_FINISHED:
             self._emit_event('exited')
-            Reply.terminate(self)
+            Reply.terminate(self, data.error)
             CHILD_WORKERS.remove(self)
         elif self._status == S_LOADED:
             self._emit_event('loaded')
@@ -334,10 +338,8 @@ class WorkerParent(WorkerCommon):
             self._emit_event('ready')
             
     def _error_handler(self, error, data, *_, **kwargs):
-        self._error = data
-        self.terminate()
-        
-    
+        self.terminate(data)
+
 class WorkerChild(WorkerCommon):
     """
         The class representing the worker in the worker thread. Should not
@@ -370,7 +372,7 @@ class WorkerChild(WorkerCommon):
         self._emit_event('exited')
         self._worker.postMessage({'type':'status', 'status':S_FINISHED})
         self._worker.close()
-        
+
 class RPCWorkerParent(WorkerParent):
     CHILD_CLASS = 'browser.webworker.RPCWorkerChild'
     

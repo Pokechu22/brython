@@ -75,11 +75,17 @@ var init_brython = function(options) {
 }
 
 var run_python = function(src, url) {
-    self.__BRYTHON__._load_scripts([{
-        name:'__main__',
-        src:src,
-        url:url
-    }])
+    try {
+        self.__BRYTHON__._load_scripts([{
+            name:'__main__',
+            src:src,
+            url:url
+        }])
+    } catch (err) {
+        var info = self.__BRYTHON__.$getattr(err, "info")
+        console.log(info)
+        self.postMessage({'type':'status', 'status':S_TERMINATED, 'error': info})
+    }
 }
 
 var wget = function(url) {
